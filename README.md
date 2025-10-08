@@ -3,8 +3,7 @@
 This repository contains assignments and projects completed for my Exploratory Data Visualization and Analysis course. The primary focus of this class is to explore, analyze, and communicate insights from data using R and its powerful visualization libraries.
 
 ## 📚 Projects (Coming Soon)
-Project Title	Description	Status
-📈 TBD	Initial project will be added soon.	🔄 In Progress
+Initial project will be added soon.	🔄 In Progress
 
 Once projects are added, this section will be updated with links and brief descriptions.
 
