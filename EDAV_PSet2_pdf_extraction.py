@@ -71,10 +71,10 @@ for key, table in table_colname.items():
         non_qol_man = pd.concat([non_qol_man, temp])
 
     else:
-        # For the first table, we only need the first, and last three columns
+        # For the other two tables, we need all columns
         temp = temp.loc[start:end, :]
 
-        # Rename columns to match main dataframe
+        # Rename columns to merge
         temp.columns = cols
 
         # Add to main dataframe, after other districts
