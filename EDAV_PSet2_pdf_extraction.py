@@ -46,7 +46,6 @@ for key, table in table_colname.items():
     cols = None
     if key =='t2':
         cols = list(non_qol_man.columns)
-    # For these other two, dummy column need to be added for renaming
     elif key == 't4':
         cols = ['QUALITY OF LIFE: NON-SAFETY INDICATORS'] +  [ i[-3:] for i in t4.columns if 'CD' in i]
     elif key == 't6':
@@ -72,10 +71,10 @@ for key, table in table_colname.items():
         non_qol_man = pd.concat([non_qol_man, temp])
 
     else:
-        # For the first table, we only need the first, and last three columns
+        # For the other two tables, we need all columns
         temp = temp.loc[start:end, :]
 
-        # Rename columns to match main dataframe
+        # Rename columns to merge
         temp.columns = cols
 
         # Add to main dataframe, after other districts
