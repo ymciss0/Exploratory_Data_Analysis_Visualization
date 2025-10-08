@@ -46,7 +46,6 @@ for key, table in table_colname.items():
     cols = None
     if key =='t2':
         cols = list(non_qol_man.columns)
-    # For these other two, dummy column need to be added for renaming
     elif key == 't4':
         cols = ['QUALITY OF LIFE: NON-SAFETY INDICATORS'] +  [ i[-3:] for i in t4.columns if 'CD' in i]
     elif key == 't6':
