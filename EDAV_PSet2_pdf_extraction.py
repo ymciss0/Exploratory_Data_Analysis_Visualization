@@ -36,7 +36,7 @@ t7 = tables[6]
 #%%
 # t1: contains title as rows, will use as a base for the table
 non_qol_man = pd.DataFrame(columns=['QUALITY OF LIFE: NON-SAFETY INDICATORS']+list(t1.iloc[0])[2:])
-non_qol_man
+
 
 # Set up dict to iterate over needed tables
 table_colname = {'t2':t2, 't4':t4, 't6':t6}
