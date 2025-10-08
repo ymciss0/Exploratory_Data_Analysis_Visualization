@@ -8,10 +8,10 @@ from datetime import date
 pd.set_option('display.max_columns', None)
 #%%
 # Define the path to the input PDF file
-pdf_file_path = "/Users/yelene/Desktop/Grad school/Columbia/Classes/Git_repos/Exploratory_Data_Analysis_Visualization/Manhattan Community District Results.pdf" 
+pdf_file_path = "/Users/yelene/Desktop/Grad school/Columbia/Classes/Git_repos/Exploratory_Data_Analysis_Visualization/data_processing/data/Manhattan Community District Results.pdf" 
 
 # Define the path to the output csv file
-save_path = '/Users/yelene/Desktop/Grad school/Columbia/Classes/Git_repos/Exploratory_Data_Analysis_Visualization/non_QOL_man.csv'
+save_path = '/Users/yelene/Desktop/Grad school/Columbia/Classes/Git_repos/Exploratory_Data_Analysis_Visualization/data_processing/data/non_QOL_man.csv'
 
 # Define the page numbers to extract tables from
 pages = 'all'
