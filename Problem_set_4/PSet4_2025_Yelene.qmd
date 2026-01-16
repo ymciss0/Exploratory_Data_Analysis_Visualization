@@ -1,0 +1,329 @@
+---
+title: "EDAV Problem Set 4 Fall 2025"
+authors: Yelene Cisse
+execute:
+  echo: true
+  warning: false
+  message: false
+format:
+  html:
+    fig-width: 6
+    fig-height: 4
+    out-width: 60%
+    embed-resources: true
+---
+
+### IMPORTANT NOTES FOR ALL QUESTIONS
+
+See "Assignment Guidelines" under Pages in CourseWorks for instructions that apply to all assignments. (The guidelines will grow as the semester progresses so check back for each new assignment.)
+
+**Do not use AI to answer interpretation questions. Keep your answers short and to the point. Overly verbose answers will be penalized.**
+
+## Regression diagnostics
+
+Dataset: `alr4::Highway`
+
+Fit the model with the mean function shown below and analyze the residuals to determine whether the assumptions of linear regression are met using the techniques discussed in class. (Use regular residuals, not standardized or studentized.) Your answer should be thorough: if multiple methods were presented (for example, for normality), use them all and compare the results.
+
+$\hat{E}(rate|trks, acpt, slim) = \beta_0 + \beta_1trks + \beta_2acpt + \beta_3slim$
+
+```{r}
+# install.packages(alr4)
+library(alr4)
+library(ggplot2)
+
+df_highway <- alr4::Highway
+
+model <- lm(rate ~ trks + acpt + slim, data = df_highway)
+summary(model)
+```
+
+Describe what you see; your responses do not have to be "yes" or "no" answers to whether assumptions are met or not.
+
+There are four assumptions we can check: linearity, constant variance, independence of residuals and normality of residuals.
+
+1. Linearity
+
+```{r}
+residual_plot <- ggplot(data=NULL, aes(x= model$fitted.values, y = model$residuals)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  labs(title="Residual plot", x="Fitted values", y="Residuals") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme_light()
+residual_plot
+```
+
+We know that linearity assumption is met if the residual lot shows no pattern (Linear Regression Course slides, page 27). Looking at the residual plot, there is no visible trend in the plot, there are sparsly distributed. The fact that we cannot see a visible trend, it means the linearity assumption is met.
+
+2. Constant variance
+
+Looking at the residuals plot again, the residual points get further away from the 0 baseline as fitted values increase. This variation indicates that the constant variance assumption is not met.
+
+3. Independence of residuals
+
+Per EdStem post "PSet 4 clarifications": 'the dataset does not have enough information to test for independence of residuals so you can skip this test.'
+
+4. Normality of residuals
+
+```{r}
+residual_histogram <- ggplot(data.frame(res = model$residuals), aes(x = res)) +
+  geom_histogram(aes(y = ..density..), bins = 20,
+                 fill = "lightblue", color = "cornflowerblue") +
+  geom_density(color = "darkblue", linewidth = 1) +
+  labs(title = "Histogram of Residuals with Density Curve",
+       x = "Residuals",
+       y = "Density") +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+residual_histogram
+```
+```{r}
+qq_plot <- ggplot(data.frame(res = model$residuals), aes(sample = res)) +
+  stat_qq(color = "cornflowerblue") +
+  stat_qq_line(color = "darkblue") +
+  labs(title = "QQ Plot of Residuals",
+       x = "Theoretical Quantiles",
+       y = "Sample Quantiles") +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+qq_plot
+```
+
+
+The histogram with the density curve shows an approximately bell-shaped distribution, though with slight skewness and some unevenness in the tails. The QQ plot further indicates that most residuals follow the theoretical normal line fairly well, with minor deviations at both extremes. Overall, the residuals are reasonably close to normal, with some mild departures in the tails, but not enough to strongly violate the normality assumption.
+
+Confirm with Shapiro-Wilk test:
+
+```{r}
+shapiro.test(model$residuals)
+```
+
+p-values = 0.6 > 0.05, fails to reject the null hypothesis of normality, indicating no statistically significant departure from a normal distribution. Overall, the residuals appear to satisfy the normality assumption.
+
+## Coefficient plots
+
+a. Using the model from question 1., $\hat{E}(rate|trks, acpt, slim) = \beta_0 + \beta_1trks + \beta_2acpt + \beta_3slim$, create a coefficient plot showing 95% confidence intervals for the model coefficients. 
+
+```{r}
+# Get confidence interval
+coeff_df <- data.frame(
+  term = names(coef(model)),
+  estimate = coef(model),
+  confint(model, level=0.95)
+)
+
+colnames(coeff_df)[3:4] <- c("lower", "upper")
+# Get confidence interval
+coeff_df <- data.frame(
+  term = names(coef(model)),
+  estimate = coef(model),
+  confint(model, level=0.95)
+)
+colnames(coeff_df)[3:4] <- c("lower", "upper")
+
+# Remove intercept
+coeff_df <- coeff_df[coeff_df$term != "(Intercept)", ]
+
+# Reorder the terms: trks at bottom, slim in middle, acpt at top
+coeff_df$term <- factor(coeff_df$term, levels = c("trks", "slim", "acpt"))
+
+coeff_plot <- ggplot(coeff_df, aes(x = estimate, y = term)) +
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 0.8) +
+  geom_errorbarh(aes(xmin = lower, xmax = upper), 
+                 width = 0.2, color = "steelblue", size = 1) +
+  geom_point(size = 3, color = "blue") +
+  scale_x_continuous(breaks = seq(-5, 5, by = 0.1)) +
+  labs(title = "Coefficient Estimates with 95% CI",
+       x = "Estimate",
+       y = "Variable") +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5, size = 14))
+coeff_plot
+```
+
+b. Interpret the graph in a.
+
+Looking at the coefficient plot, the most important feature would be trks (midpoint of confidence range furthest away from 0), followed by acpt and finally slim (confidence range and midpoint closest to 0).
+
+c. Recreate the graph in a. with standardized coefficients.
+
+```{r}
+# install.packages("parameters")
+library(parameters)
+library(dplyr)
+
+
+coeff_df_std <- standardize_parameters(model, ci = 0.95) |> 
+  as.data.frame()
+coeff_df_std <- coeff_df_std |>
+  rename(
+    term = Parameter,
+    estimate = Std_Coefficient,
+    lower = CI_low,
+    upper = CI_high
+  )
+
+# Remove intercept
+coeff_df_std <- coeff_df_std[coeff_df_std$term != "(Intercept)", ]
+
+coeff_df_std$term <- factor(coeff_df_std$term, levels = c("slim", "trks", "acpt"))
+
+coeff_std_plot <- ggplot(coeff_df_std, aes(x = estimate, y = term)) +
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 0.8) +
+  geom_errorbarh(aes(xmin = lower, xmax = upper), 
+                 width = 0.2, color = "steelblue", size = 1) +
+  geom_point(size = 3, color = "blue") +
+  scale_x_continuous(breaks = seq(-5, 5, by = 0.1)) +
+  labs(title = "Coefficient Estimates with 95% CI",
+       x = "Estimate",
+       y = "Variable") +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5, size = 14))
+coeff_std_plot
+```
+
+d. Interpret the graph in c., comparing to a.
+
+With standardized coefficient, the most important feature now appears to be acpt, with midpoint of confidence interval being furthest away from 0 than trks. This is a change in order of importance compared to part a. After acpt, slim looks slightly more important than trks as well, however it is hard to tell due to the confidence interval range.The confidence interval for slim now surpasses that of trks compared to part a, we can now see that there is a better confidence of where the true coefficient is in trks (smaller range of values to consider) than we are for slim.
+
+e. Create a coefficient x effect plot. 
+
+```{r}
+
+coef_x_features <- data.frame(
+  feature = c(rep("trks", nrow(df_highway)),
+              rep("acpt", nrow(df_highway)),
+              rep("slim", nrow(df_highway))),
+  value = c(df_highway$trks * coef(model)["trks"],
+            df_highway$acpt * coef(model)["acpt"],
+            df_highway$slim * coef(model)["slim"])
+)
+
+# Reorder features
+coef_x_features$feature <- factor(coef_x_features$feature, 
+                                   levels = c("slim", "trks", "acpt"))
+
+feature_means <- aggregate(value ~ feature, data = coef_x_features, FUN = mean)
+
+coef_x_effect_plot <- ggplot(coef_x_features, aes(x = value, y = feature)) +
+  geom_jitter(color = "black", alpha = 0.6, size = 1, height = 0.1) +  # Added jitter
+  geom_point(data = feature_means, aes(x = value, y = feature), 
+             color = "blue", size = 1) +  # Mean points (slightly larger)
+  geom_vline(xintercept = 0, linetype = "dotted", color = "black", size = 0.8) +
+  theme_light() +
+  theme(
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    plot.title = element_text(hjust = 0.5, size = 14),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_line(color = "gray95")
+  ) +
+  labs(
+    title = "Coefficient x feature plot",
+    x = "value",
+    y = "feature"
+  )
+coef_x_effect_plot
+```
+
+f. Do you learn anything new from part e.?
+
+Looking at the effect of the different feature, for this model the average contribution of slim surpasses that trks and acpt. The variable trks also seem to have more effect on the final rate than acpt did. This new order could mean that the true coefficient for slim might have been close to the lowest bound in the confidence interval seen above (furthest from zero), and acpt true coefficient might have been closer to the lower end of its confidence in terval as well ( closer to zero).
+
+## Variable added plots
+
+a. Find the coefficients for the following models with mean functions:
+
+model 1: $\hat{E}(rate|trks, acpt) = b_0 + b_1trks + b_2acpt$
+
+model 2: $\hat{E}(rate|slim) = b_0 + b_1slim$
+
+Compare $R^2$ from the full model in question 1 to the $R^2$ values for the two models. What do you learn about the regressors from these values?
+
+```{r}
+
+model1 <- lm(rate ~ trks + acpt, df_highway)
+
+model2 <- lm(rate ~ slim, df_highway)
+
+summary(model1)
+
+summary(model2)
+
+```
+
+Multiple R-squared:
+
+- full model: Multiple R-squared:  0.6774
+- model1:	Multiple R-squared:  0.6326
+- model2: Multiple R-squared:  0.4637
+
+Comparing the three R^2 values, the model with three predictors yields the best results with highest R^2, followed by 2 predictors and then just 1 in the ranking. Looking at this continuous improvement, we can conclude that this model became better at explaining variation as more predictors were added.
+
+b. How much additional variation is explained by the addition of `slim` to model 1?
+
+Additional variation = 0.6774 - 0.6326 = 0.0448 = 4.48% of the variation is explained by the addition of 'slim' to model 1.
+
+c. Create an added variable plot for `slim` and add the best fitting line. (Hint: unlike the example in class, there are *two* other regressors in the problem besides `slim`.)
+
+```{r}
+# create models for the plot
+ref_model <- lm(rate ~ trks + acpt, df_highway)
+slim_model <- lm(slim ~ trks + acpt, df_highway)
+
+res_ref_model <- residuals(ref_model)
+res_slim_model <- residuals(slim_model)
+
+plot_data <- data.frame(
+  res_slim_model = res_slim_model,
+  res_slim_model = res_ref_model
+)
+
+added_var_plot <- ggplot(plot_data, aes(x = res_slim_model, y = res_ref_model)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(
+    x = "slim unexplained by trks + acpt",
+    y = "rate unexplained by trks + acpt",
+    title = "rate ~ trks + acpt vs. slim ~ trks + acpt residuals"
+  ) +
+  theme_light()
+
+added_var_plot
+
+```
+
+d. Determine and interpret the slope of the line in part c.
+
+Get the slope value for the line in part c:
+
+```{r}
+slope_res <- lm(res_ref_model ~ res_slim_model)
+coef(slope_res)["res_slim_model"]
+```
+
+
+The slope of the residual plot corresponds to the coefficient of slim in the full model seen above (= -0.09844 ). This makes sense as the added variable plot shows the relationship between the part of the rate that are unexplained by trks and acpt as it relates to the part of slim that is independent of the other two predictors
+
+e. Determine and the $R^2$ of the regression in part d. and relate it to the $R^2$ values from part a.
+
+```{r}
+summary(slope_res)
+```
+
+The Multiple R^2 for part d is 0.1218, which corresponds to the percentage of the remaining unexplained variance once we remove the explainability of model with trks and acpt.
+
+- full model ( tkrs + acpt + slim ): Multiple R-squared:  0.6774
+- model1 ( trks + acpt ):	Multiple R-squared:  0.6326
+
+The full model with all three predictors explains 67.74% of the variance
+The model excluding 'slim' explains 63.26% of the variance
+The added variable plot shows that adding slim explains 12.18%  of the remaining unexplained variance
+
+Remaining unexplained variance = 1 - 0.6326 = 0.3674
+Using added variable plot slope:  0.1218 * 0.3674 = 0.04474932
+
+Verify: 0.6326 + 0.04474932 = 0.6773493 (corresponds with full model R^2 as expected!)

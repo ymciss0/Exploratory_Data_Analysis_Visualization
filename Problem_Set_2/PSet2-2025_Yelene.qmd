@@ -1,0 +1,168 @@
+---
+title: "EDAV Problem Set 2 Fall 2025"
+author: Yelene Cisse
+execute:
+  echo: true
+format:
+  html:
+    fig-width: 6
+    fig-height: 4
+    embed-resources: true
+---
+
+### IMPORTANT NOTES FOR ALL QUESTIONS
+
+See "Assignment Guidelines" under Pages in CourseWorks for instructions that apply to all assignments. (The guidelines will grow as the semester progresses so check back for each new assignment.)
+
+Read *Graphical Data Analysis with R*, Ch. 6, 7
+
+### Wait List
+
+[12 points]
+
+a) The file `stats_wl.csv` contains information about waitlist movement for a Columbia University undergraduate statistics class.
+
+There are 640 rows and 4 variables:
+
+`Name` -- name of student (actual names were replaced with names generated from the **randomNames** package)
+
+`Date` -- date of recording of waitlist positions (assume end of day after all movement for that day has been completed)
+
+`Priority` -- position in waitlist, for example `1` = top position on list
+
+`Status` -- **final** outcome, *Registered* = received a place in class and remained; *Dropped Class* = received a place in class and left; *Left List* = left waiting list; *Joined* = remained on waiting list at the end of the change of program period. (Note that the status reflects what ultimately happened, *not what the status was on a particular date.*)
+
+Create an alluvial diagram using the **ggalluvial** package that shows waitlist movement during the change of program period. It is not necessary to include the `Name` column in the diagram, but it should be possible to observe movement of individual students: for example, that the student who was 22nd in the waitlist on Sept 9th moved up to 15th place on Sept 16th and then left the list. If a student left the list, the alluvium should end ("ghosting"). Note that due to the consistent nature of waitlist movement (one can't move down), the alluvia should not cross at all. The top position should be on top. Color by `Status`. 
+
+```{r, message=FALSE}
+#| fig-width: 18
+#| fig-height: 14
+
+
+# install.packages('ggalluvial')
+library(tidyverse)
+library(ggalluvial)
+ library(dplyr)
+
+# Import dataset
+data3 <- read_csv('stats_wl.csv', show_col_types = FALSE)
+
+# Date format for plot, since all data is 2021, we will focus solely on the day and month to help with axis presentation
+data3$formatted_date <- format(data3$Date, "%b_%d")
+
+# Sort priority list so 1 is on top and lowest position is at the bottom
+data3 <- data3 |>
+  mutate(across(everything(), ~ if (is.numeric(.x)) factor(.x, levels = sort(unique(.x))) else as.factor(.x)))
+
+# Re-order Status stratum
+data3$Status <- factor(data3$Status,
+                                 levels = c("Registered", "Dropped Class", "Joined", "Left List"))
+
+alluvial_plot = ggplot(
+  data3,
+  aes(alluvium=Name, x= formatted_date, stratum=Priority,
+    y = 1  # each student counts equally
+  )
+) +
+  geom_alluvium(aes(fill = Status), width = 0.5, alpha = 0.8, color = "gray60") +
+  geom_stratum(width = 0.15, fill = "gray90", color = "gray40") +
+  geom_text(
+    stat = "stratum",
+    aes(label = after_stat(stratum)),
+    size = 3,
+    check_overlap = TRUE
+  ) + ggtitle("Movement of students during change of program period") +
+  xlab("Change of Program Period")+
+  ylab("Waitlist outcomes")+
+  scale_fill_brewer(palette = "Set2") +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 35, hjust = 1),
+    panel.grid = element_blank(),
+    plot.margin = margin(10, 20, 10, 20)
+  ) +
+  guides(fill = guide_legend(title = "Final Status"))
+
+alluvial_plot
+
+```
+
+b) How many students joined the waiting list on Sept 14? How many left?
+
+There are four students (positions 51, 50, 49 and 48) who joined the waiting list on September 14th, and 2 left afterwards (positions 47, 36).
+
+c) Describe two noteworthy trends in the data based on the graph.
+
+Most people who were on top of the list at the beginning of the period were able to register for the class and remained registered throughout the period. Out of the students who were on top of the list and ended up dropping the class, one dropped very early on, the second dropped after a couple days, and the remaining stayed until the last two days before dropping the class. 
+
+Most of students who are towards the bottom of the priority list in the beginning of the period, leave the list after a couple days of slow rank increment, likely giving up on making it to the top of the list once half the period passed. That's why after September 17th, we only see 7 out of the 19 students leaving the wait list, in the last two days of the period.
+
+d) Assume the earliest date is the first day of classes and the latest date shown in the last day of change of program period, when waitlists close. How would you describe a student's chance of getting in this class based on the graph?
+
+Based on the graph, it is very unlikely for students ranked after 24 in the priority list at the beginning of the period to join the class. Most of the people who joined the waiting list at those ranks stayed there throughout the period or left. There would be less than 50% chance of joining the class if you are not among the first people to join in the first two days.
+
+
+### Community Districts
+
+[16 points]
+
+For this question we’ll use a subset of data from a survey on NYC attitudes toward various quality of life issues. The source of the data is: [https://cbcny.org/sites/default/files/media/files/Manhattan%20Community%20District%20Results.pdf](https://cbcny.org/sites/default/files/media/files/Manhattan%20Community%20District%20Results.pdf)
+
+a) Use a **reproducible** (scripted) method of your choice to extract data from the pdf and save it in a `.csv` file. Your data file should contain the following: non-safety QoL indicators for the 12 Manhattan community districts. Upload the `.csv` file with your assignment.
+
+The pdf extraction was done using tablu library in python. Below the link to the notebook:
+
+[View code on GitHub](https://github.com/ymciss0/Exploratory_Data_Analysis_Visualization/blob/dev/EDAV_PSet2_pdf_extraction.py)
+
+
+b) Draw a PCA biplot using the **redav** package [https://github.com/jtr13/redav](https://github.com/jtr13/redav) In the biplot, the vectors should be the indicators and the points the community districts.
+
+```{r, message=FALSE}
+#| fig-width: 12
+#| fig-height: 8
+
+library(devtools)
+# devtools::install_github("https://github.com/jtr13/redav")
+library(redav)
+
+data4 <- read_csv("non_qol_man.csv", show_col_types = FALSE)
+
+# For the biplot to have indicators as vector, we need to pivot the data
+
+data4_long <- data4 |>
+  pivot_longer(cols = 'CD1':'CD12', names_to = "Manhattan_district", values_to = "Percent_rating") |>
+  relocate(Manhattan_district)
+
+# Pivot wider to spread quality of life values into columns
+biplot_data <- data4_long |>
+  pivot_wider(names_from = "QUALITY OF LIFE: NON-SAFETY INDICATORS", values_from = "Percent_rating")
+
+draw_biplot(biplot_data)
+
+```
+
+
+Based your answers to c) - e) on your graph.
+
+c) Which indicator is most positively correlated with Control of street noise? Which indicator is most negatively correlated with Rat control?
+
+Neighborhood playgrounds is most positively correlated with Control of street noise.
+Traffic is most negatively correlated with Rat control.
+
+d) What clusters do you observe?
+
+We can see similar profiles for the following districts:
+
+- CD3, CD9, CD10, CD11, CD12
+- CD5, CD6
+- CD1, CD8
+- CD2, CD4
+
+CD7 is the only district not in an observable cluster.
+
+
+e) Which district would you choose to live in based on the biplot? Why?
+
+Based on the biplot, the district of choice would be CD8. The vectors indicate a high level of cleanliness for the neighborhood and better rat control then other clusters. There is also an availability of cultural activities, which means this could be a fun district to live in and meet new people. The district also has a greater amount of healthcare services available compared to others, which would be ideal in case of emergency.
