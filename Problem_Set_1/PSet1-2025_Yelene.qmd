@@ -1,0 +1,402 @@
+---
+title: "EDAV Problem Set 1 Fall 2025"
+author: Yelene Cisse
+execute:
+  echo: true
+format:
+  html:
+    fig-width: 6
+    fig-height: 4
+    embed-resources: true
+---
+
+### IMPORTANT NOTES FOR ALL QUESTIONS
+
+See "Assignment Guidelines" under Pages in CourseWorks for instructions that apply to all assignments. (The guidelines will grow as the semester progresses so check back for each new assignment.)
+
+Read *Graphical Data Analysis with R*, Ch. 3, 4, 5
+
+```{r, message=FALSE}
+# List of packages installed
+# install.packages("openintro")
+# install.packages("tidyverse")
+# install.packages("dplyr")
+# install.packages("ggridges")
+# install.packages("agridat")
+# install.packages("gridExtra")
+```
+
+
+### Temporal Lobes
+
+[8 points]
+
+Data: *mtl* in **openintro** package
+
+a)  Draw two histograms--one with base R and the other with **ggplot2**--of the variable representing the thickness of the subiculum subregion of the medial temporal lobe using the default parameters. What is the default method each uses to determine the number of bins? (For base R, show the calculation for this data.) Which do you think is a better choice for this dataset and why?
+
+```{r, message=FALSE}
+
+library(tidyverse)
+library(openintro)
+library(ggplot2)
+library(broom)
+
+df2 <- openintro::mtl
+
+# Create Base R histogram by default
+hist(df2$asubic)
+
+# Create ggplot2 histogram by default
+ggplot(df2, aes(x = asubic)) + geom_histogram()
+```
+
+By default, Base R gives 9 bins for the histogram plotted. This is a combination between Sturge's formula (k=⌈log2*(number of data points)+1⌉) and R's internal pretty() function.
+
+Using our data, k = ⌈log2*(35)+1⌉=⌈5.129+1⌉=⌈6.129⌉=7 bins
+
+The 7 bins are then adjusted with pretty(), which takes the range of the asubic columns and argument n=7, and output 10 breaks (= 9 bins).
+
+The ggplot histogram shows 30 bins by default with the stat_bin() element.Comparing the two plots, the default histogram provided by Base R seems like a better choice for this dataset because the lower number of bins provided makes it easier to observe the trend (unimodal distribution).
+
+
+b) Draw two histograms of the `age` variable with boundaries at multiples of 5, one right closed and one right open. Every boundary should be labeled (45, 50, 55, etc.)
+
+```{r, message=FALSE}
+
+# Get the range of the data for age
+# print(range(df2$age))
+
+# Since the data goes from 46 to 75, we will use 45 as lower boundary and seq(45, 75, 5) to label the x-axis.
+
+# Right-closed histogram
+ggplot(df2, aes(age)) +
+  geom_histogram(color="blue", fill="cornflowerblue", closed="right", binwidth=5, boundary=45) +
+  scale_x_continuous(breaks = seq(45, 75, by = 5)) +
+  labs(title = "Histogram of Age (right-closed)", x = "Age")
+
+# Right-open histogram
+ggplot(df2, aes(age)) +
+  geom_histogram(color="blue", fill="cornflowerblue", closed="left", binwidth=5, boundary=45) +
+  scale_x_continuous(breaks = seq(45, 75, by = 5)) +
+  labs(title = "Histogram of Age (right-open)", x = "Age")
+```
+
+
+c)  Add the same parameter value(s) to the code of your plots from part b) so that the result is that the right open and right closed versions are identical. Explain your strategy.
+
+Using just binwidth = 5, without a specific boundary, produces the same histogram for right closed and right open histograms. Without boundary, ggplot offset the data in a way that prevents the data point to fall exactly on the bin edge, so whether the bin is right-closed or right-open does not really make a difference.
+
+```{r, message=FALSE}
+
+# Right-closed histogram
+ggplot(df2, aes(age)) +
+  geom_histogram(color="blue", fill="cornflowerblue", closed="right", binwidth=5) +
+  scale_x_continuous(breaks = seq(45, 75, by = 5)) +
+  labs(title = "Histogram of Age (right-closed)", x = "Age")
+
+ggplot(df2, aes(age)) +
+  geom_histogram(color="blue", fill="cornflowerblue", closed="left", binwidth=5) +
+  scale_x_continuous(breaks = seq(45, 75, by = 5)) +
+  labs(title = "Histogram of Age (right-open)", x = "Age")
+```
+
+
+### Doctors
+
+[4 points]
+
+Data: *breslow* dataset in **boot** package
+
+Draw histograms of the age at death for deaths attributed to coronary artery disease among doctors in the *breslow* dataset, faceted on smoking status. 
+
+```{r, message=FALSE}
+#| fig-width: 8
+
+library(dplyr)
+library(boot)
+
+# Import data
+df4 <- boot::breslow
+# print(str(df4))
+
+# Change the age to numeric, since it is stored as factor
+df4$age <- as.numeric(as.character(df4$age))
+
+# Create histogram
+ggplot(df4, aes(x=age, weight=y)) +
+  geom_histogram(color="blue", fill="cornflowerblue", binwidth=10) +
+  facet_wrap(~ smoke, labeller = labeller(smoke = c("1" = "Doctors smoked", "0"= "Doctors did not smoke")), scales = "fixed") +
+  scale_y_continuous(breaks=seq(0, 200, 25)) +
+  labs(title = "Histogram of Age at death among doctors with Coronary Artery Disease (CAD)", x= "Age", y = "Number of deaths attributed to CAD")
+
+```
+
+We can observe a unimodal distribution for doctors who smoked,  showing that most of them died around 60 years old. On the other hand, we can observe a left skewed distribution for doctors who did not smoke indicating that they tended to die at 60+ years old. 
+
+In terms of frequency, the general trend shows that doctors who did not smoke were less prone to die due to coronary artery disease (CAD) compared to doctors who did smoke (much higher frequency of deaths).
+
+
+### House properties
+
+[5 points]
+
+Data: *ames* in the **openintro** package
+
+a) Create a frequency bar chart for the roof styles of the properties.
+
+```{r, message=FALSE}
+#| fig-width: 8
+#| fig-height: 6
+
+library(openintro)
+library(dplyr)
+
+df6 <- openintro::ames
+
+# Get frequency for each roof type
+
+df_roof <- df6 |>
+  group_by(Roof.Style) |>
+  summarise(count=n())
+
+# Create frequency bar chart
+ggplot(df_roof, aes(x=reorder(Roof.Style,-count), y=count)) +
+  geom_col(color="blue", fill="cornflowerblue") +
+  labs(title = "Count of Roof Styles", x= "Roof style", y = "Frequency") 
+
+```
+
+
+From this plot, we can see that the majority of roofs have "Gable" as roof style, followed by hip. The remaining styles were less popular, with shed being used the least.
+
+b) Create a frequency bar chart for the variable representing the month in which the property was sold.
+
+```{r, message=FALSE}
+#| fig-width: 8
+#| fig-height: 6
+
+# Create month names column for bar chart
+df6 <- df6 |>
+  mutate(Month_sold = recode(Mo.Sold, `1` = "Jan", `2` = "Feb", `3` = "Mar", `4` = "Apr", `5` = "May", `6` = "Jun", `7` = "Jul", `8` = "Aug", `9` = "Sep", `10` = "Oct", `11` = "Nov", `12` = "Dec"))
+
+# Get frequency by months
+df_month <- df6 |>
+  group_by(Month_sold) |>
+  summarise(count=n())
+
+# Reorder the data so that plot shows progression from January to December
+df_month <- df_month |>
+  mutate(Month_sold = factor(Month_sold, levels=month.abb, ordered=TRUE))
+
+# Create frequency bar chart
+ggplot(df_month, aes(x=Month_sold, y=count)) +
+  geom_col(color="blue", fill="cornflowerblue") +
+  labs(title = "Count of sold property within a given Month", x= "Month sold", y = "Frequency")
+
+```
+
+From this plot, we can see that most properties were sold during the summer, especially during the month of June, with the trend decreasing for other seasons. The least amount of houses are sold during the winter.
+
+c) List all the variables that have `Ex` as a factor level. 
+```{r, message=FALSE}
+
+# Return the names of the variables with Ex in the column.
+cols_ex <- names(df6)[colSums(df6 == "Ex") > 0]
+
+cols_ex <- df6 |>
+    select(where(~ any(as.character(.) == "Ex", na.rm = TRUE))) |>
+    names()
+```
+
+The following variables have "Ex" as a level: "Exter.Qual", "Exter.Cond", "Bsmt.Qual", "Bsmt.Cond", "Heating.QC", "Kitchen.Qual", "Fireplace.Qu", "Garage.Qual", "Garage.Cond", and "Pool.QC".
+
+d) Create faceted bar charts using `facet_wrap()` to display the frequency distribution of all variables identified in part c).
+
+```{r, message=FALSE}
+#| fig-width: 16
+#| fig-height: 12
+
+# Subset and reshape the data
+df_sub <- df6[ , c("Exter.Qual", "Exter.Cond", "Bsmt.Qual", "Bsmt.Cond", "Heating.QC", "Kitchen.Qual", "Fireplace.Qu", "Garage.Qual", "Garage.Cond", "Pool.QC")]
+df_long <- df_sub |>
+  pivot_longer(cols = c("Exter.Qual", "Exter.Cond", "Bsmt.Qual", "Bsmt.Cond", "Heating.QC", "Kitchen.Qual", "Fireplace.Qu", "Garage.Qual", "Garage.Cond", "Pool.QC"), names_to = "variable", values_to = "category")
+
+# Count frequency for each category
+df_var_freq <- df_long |>
+  group_by(variable, category) |>
+  summarise(count=n())
+
+# Re-order the x-axis so that we have : Poor (Po), Fair (Fa), Average/Typical (TA),	Good (Gd) and Excellent (Ex)
+levels <- c("Ex", "Gd", "TA", "Fa", "Po")
+
+df_var_freq$category <- factor(df_var_freq$category, levels = rev(c("Ex", "Gd", "TA", "Fa", "Po")))
+
+# Create faceted bar charts by identified variable
+ggplot(df_var_freq, aes(x=category, y=count)) +
+  geom_bar(stat="identity", color="blue", fill="cornflowerblue") +
+  facet_wrap(~ variable, axes="all_x", scales = "fixed") +
+  scale_y_continuous(breaks=seq(0, 2600, 500)) +
+  scale_x_discrete(labels = c("Po" = "Poor", "Fa" = "Fair", "TA" = "Average/Typical", "Gd" = "Good", "Ex" = "Excellent")) +
+  labs(title = "Frequency distribution for variables with Excellent ('Ex') as a level", x= "Category", y = "Frequency")
+
+```
+
+Most properties have an exterior condition, exterior quality and kitchen quality that is average/typical. The other observation we can make is that the majority of properties have an excellent heating quality and condition. For the fireplace quality, a most of the data is missing but we can still see that the remaining portion of the data suggests average/typical or good condition. No conclusion can be draw from the pool quality and condition since the data is almost all missing. Finally, little to no properties have poor quality/condition across these features.
+
+
+### House sizes and prices
+
+[12 points]
+
+Data: *ames* in the **openintro** package
+
+For all, adjust parameters to the levels that provide the best views of the data.
+
+Draw four plots of `price` vs. `area` with the following variations:
+
+a) Scatterplot with density contour lines
+```{r, message=FALSE}
+#| fig-width: 8
+#| fig-height: 6
+
+df8 <- openintro::ames
+  
+# Subset to area < 4000 and price < 600000 for a better view
+
+df8_sub <- df8[df8$area < 4000 & df8$price < 600000,]
+
+# Plot price vs area
+ggplot(df8_sub, aes(x=price, y=area)) +
+  geom_point(color="blue", alpha=0.5) +
+  geom_density_2d(color = "red") +
+  labs(title="Plot of Price vs Area of Properties sold in Ames", x="Price (USD)", y="Area (sqft)")
+```
+
+
+b) Hexagonal heatmap of bin counts
+
+```{r, message=FALSE}
+#| fig-width: 8
+#| fig-height: 6
+#| 
+ggplot(df8_sub, aes(x = price, y = area)) +
+  geom_hex(bins = 25) +
+  scale_fill_gradient(low = "skyblue", high = "darkblue") +
+  labs(title = "Hexagonal Heatmap of Price vs Area", x = "Price (USD)", y = "Area (sqft)", fill = "Count") +
+  theme_minimal()
+```
+
+
+c) Describe noteworthy patterns in the data, using the "Movie ratings" example on page 82 (last page of Section 5.3) as a guide.
+
+There were a couple outliers with a price around 200,000 dollars for 4500+ sqft as well as about 750,000 dollars for a little less than 4500 sqft. There seems to be a general positive correlation between the area of the property and the price. In general terms, the higher the area, the higher the price. There is also a concentration of properties between 500 & 2000 sqft and 100,000 and 250,000 dollars. 
+
+
+d) Create scatterplots of `price` vs. `area` faceted by `Neighborhood`. Add best fitting simple linear regression lines and sort the facets by the value of the slope of these lines from low to high. (Use `lm()` to get the slopes.)
+
+```{r, message=FALSE}
+#| fig-width: 16
+#| fig-height: 12
+
+# Get slopes to order the data
+slopes <- df8_sub |>
+  group_by(Neighborhood) |>
+  do(tidy(lm(price ~ area, data = .))) |>
+  filter(term == "area") |>
+  select(Neighborhood, slope = estimate)
+
+# Join slopes to data and order by slope
+df8_nbh <- df8_sub |>
+  left_join(slopes, by = "Neighborhood") |>
+  mutate(Neighborhood = reorder(Neighborhood, slope))
+
+
+# Create faceted scatterplots
+plot8_slope <- ggplot(df8_nbh, aes(x=area, y=price)) +
+  geom_point(alpha=0.6) +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  facet_wrap(~ Neighborhood, scales = "fixed") +
+  labs(title = " Price vs Area", x= "Area (sqft)", y = "Price (USD)") 
+
+plot8_slope
+
+```
+
+
+e) Is the slope higher in neighborhoods with higher mean housing prices? Present graphical evidence and interpret in the context of this data.
+
+Looking at the vertical facets there does not seem to be a direct positive correlation between average mean price and slope. For example, comparing the cluster of data points from the lowest slope facet ( Neighborhood = Veenker) and one of the highest slope facets ( Neighborhood = Somerst) we see that both facets have a cluster of points between 200,000 and 400,000 dollars, which suggests they would have similar price average despite having much different slopes:
+
+```{r, message=FALSE}
+#| fig-width: 8
+
+# Look at Veenker and Somerst facets
+
+facet_comp <- df8_nbh |>
+  filter(Neighborhood %in% c("Veenker", "Somerst"))
+
+ggplot(facet_comp, aes(x=price, y=area)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  facet_wrap(~ Neighborhood, scales = "fixed") +
+  labs(title = " Price vs Area", x= "Price (USD)", y = "Area (sqft)")
+```
+
+
+This can further be examined with a table of average price and slope per neighborhood:
+
+```{r, message=FALSE}
+
+# Create a view of the slopes and mean prices
+table_mean_price <- df8_nbh |>
+  group_by(Neighborhood) |>
+  summarise(slope = unique(slope, na.rm = TRUE),Avg_price = mean(price, na.rm = TRUE),.groups = "drop")
+
+table_mean_price
+```
+
+Here we actually see that Veenker has a higher average price than Somerst (248,315 > 229,707), despite having a lower slope.
+
+f) Repeat parts d) with the following adjustment: order the faceted plots by $R^2$ from the linear regression of `price` on `area` by `Neighborhood`.  Are the results the same for slope and $R^2$? Explain using examples from the graphs.
+
+```{r, message=FALSE}
+#| fig-width: 16
+#| fig-height: 12
+
+# Get the R^2 for each neighborhood
+rsq_df <- df8_nbh |>
+  group_by(Neighborhood) |>
+  do(glance(lm(price ~ area, data = .))) |>
+  select(Neighborhood, r.squared)
+
+rsq_df
+
+# Attach R^2 to data
+df8_nbh <-  df8_nbh |>
+  left_join(rsq_df, by = "Neighborhood") |>
+  mutate(Neighborhood = reorder(Neighborhood, r.squared))
+
+p8_rsq <- ggplot(df8_nbh, aes(x=area, y=price)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  facet_wrap(~ Neighborhood, scales = "fixed") +
+  labs(title = " Price vs Area", x= "Area (sqft)", y = "Price (USD)")
+
+p8_rsq
+```
+
+The results differ from the slope facets. We can look at Neighborhood BrkSide as an example. When ordering by slope, we see it at the 12th position amongst highest slopes (12th place out of 28), however the R^2 is ranked 2nd out of the 28 facets. This may indicate that the linear regression does not accurately capture the full strength of signal between price and area, the variance in price cannot fully be explained by the area of the property.
+
+### Use of ChatGPT throughout this assignment:
+
+Chat gpt used to figure out errors throughout the assignment, such as the following when creating plots:
+
+Error in `geom_histogram()`:
+! Problem while computing stat.
+ℹ Error occurred in the 1st layer.
+Caused by error in `setup_params()`:
+! `stat_bin()` requires an x or y aesthetic.
+Run `rlang::last_trace()` to see where the error occurred.
+
+The problem was using aes=(x) instead of aes(x).

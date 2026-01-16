@@ -1,0 +1,233 @@
+---
+title: "EDAV Problem Set 3 Fall 2025"
+authors: Yelene Cisse
+execute:
+  cache: true
+  echo: true
+format:
+  html:
+    fig-width: 7
+    fig-height: 5
+    embed-resources: true
+editor_options: 
+  chunk_output_type: inline
+---
+
+### IMPORTANT NOTES FOR ALL QUESTIONS
+
+See "Assignment Guidelines" under Pages in CourseWorks for instructions that apply to all assignments. (The guidelines will grow as the semester progresses so check back for each new assignment.)
+
+### Resources for this assignment
+
+*Geocompution with R*, *Spatial Data Visualization with tmap*
+[https://geocompx.org/](https://geocompx.org/)
+
+Westchester County, New York data: [https://gis.westchestergov.com/](https://gis.westchestergov.com/)
+
+Census data with **tidycensus** package: *Analyzing US Census Data: Methods, Maps, and Models in R* [https://walker-data.com/census-r/](https://walker-data.com/census-r/)
+
+NOTES
+
+For **tidycensus** you will need to set up a Census API key. After calling the API and getting the data, save it locally and comment out the API call lines. Work with your saved local copy to avoid making repeated calls for the same data, to save time waiting for the data, and to be able to work without an internet connection. Do not share your API key. You may store it *locally* in `.Renviron`. 
+
+The only packages you need for this assignment in addition to **tidyverse** packages (not listed below) are **sf**, **tidycensus**, **ggdensity**, and **tmap**.
+
+```{r}
+#| message: false # hides messages from loading packages
+
+# install.packages('tidyverse')
+# install.packages('tidycensus')
+# install.packages('sf')
+# install.packages('tmap')
+# install.packages('ggdensity')
+
+library(sf)
+library(tmap)
+library(dplyr)
+
+tmap_mode("plot")
+
+muni_path   <- "/Users/yelene/Desktop/Grad school/Columbia/Classes/Fall 2025/EDAV/Municipal_Boundaries_/Municipal_Boundaries_.shp"
+school_path <- "/Users/yelene/Desktop/Grad school/Columbia/Classes/Fall 2025/EDAV/School_Districts/School_Districts.shp"
+
+west_muni   <- st_read(muni_path)
+west_school <- st_read(school_path)
+
+```
+
+### Median Household Income
+
+[12 points]
+
+Use **tidycensus** (see NOTES above) and **tmap** (version 4 code). 
+
+```{r}
+#| message: false # hides messages from loading packages
+library(tidycensus)
+library(tmap)
+library(sf)
+library(ggplot2)
+library(ggdensity)
+```
+
+Maps do not need to be labeled.
+
+a) Which geographic areas (states, counties, etc.) are available through **tidycensus**? Cite your source.
+
+The tidycensus package gives access to U.S state and county data (including Alaska and Hawaii), as well as FIPS and zip codes. The package also makes available census tract and census block group information, along different district boundaries such as school districts or voting districts. Sources: https://cran.r-project.org/web/packages/tidycensus/tidycensus.pdf, https://www2.census.gov/geo/pdfs/reference/geodiagram.pdf
+
+
+b) Get data for median household income (MHI) by census **block group** in Westchester County in 2023. Draw a histogram of MHI. What do you observe?
+
+```{r}
+#| message: false # hides messages from loading packages
+# Import and save data to local machine
+# wcst_acs_county_2023 <-get_acs(geography="block group", variables = "B19013_001", state='NY', county = "Westchester", year=2023, geometry=TRUE)
+# st_write(wcst_acs_county_2023, "/Users/yelene/Desktop/Grad school/Columbia/Classes/Fall 2025/EDAV/wcst_acs_county_2023.gpkg")
+
+wcst_acs_county_2023 <- st_read("/Users/yelene/Desktop/Grad school/Columbia/Classes/Fall 2025/EDAV/wcst_acs_county_2023.gpkg")
+
+ggplot(wcst_acs_county_2023, aes(estimate)) + geom_histogram(color="blue", fill="cornflowerblue") +
+  scale_x_continuous(breaks = seq(0, 300000, by = 50000), labels = scales::comma) + scale_y_continuous(breaks = seq(0, 110, by = 10)) +
+  labs(title = "Median Household Income in Westchester (2023)")
+
+```
+
+From the histogram, we can see that there is a great amount of data lumped into the 250,000 median household income bin, likely caused by topcoding on the incomes greater then $250,000.
+
+c) Draw a choropleth map of MHI for Westchester County using the same data.
+
+```{r}
+#| message: false # hides messages from loading packages
+tmap_mode("plot")
+
+tm_shape(wcst_acs_county_2023) +
+  tm_polygons("estimate", 
+              title = "Median Income",
+              palette = "brewer.blues",
+              border.col = "black",
+              border.alpha = 0.5) +
+  tm_layout(
+    title = "Median Household Income in Westchester County (2023)",
+    inner.margins = c(0.1, 0.05, 0.1, 0.05),
+    legend.outside = TRUE
+  )
+
+```
+
+
+d) Add school district boundaries to the choropleth.
+
+```{r}
+#| message: false # hides messages from loading packages
+
+# Import school district data
+# ny_schools <- get_acs(geography = "school district (unified)",  variables = "B19013_001", state = "NY", year = 2023,  geometry = TRUE)
+
+# st_write(ny_schools, "/Users/yelene/Desktop/Grad school/Columbia/Classes/Fall 2025/EDAV/ny_schools.gpkg")
+
+ny_schools <- st_read("/Users/yelene/Desktop/Grad school/Columbia/Classes/Fall 2025/EDAV/ny_schools.gpkg")
+
+# Intersect borders to only show Westchester bound school districts
+wcst_schools_clipped <- st_intersection(ny_schools, st_union(wcst_acs_county_2023))
+
+tmap_mode("plot")
+
+tm_shape(wcst_acs_county_2023) +
+  tm_polygons("estimate", 
+              title = "Median Income",
+              palette = "Blues",
+              border.col = "black",
+              border.alpha = 0.5) +
+  tm_shape(wcst_schools_clipped) +
+  tm_borders(col = "red", lwd = 1.5) +
+  tm_layout(
+    title = "Median Household Income in Westchester County (2023)",
+    inner.margins = c(0.1, 0.05, 0.1, 0.05),
+    legend.outside = TRUE
+  )
+
+```
+
+
+e) Describe observed patterns across and within school districts.
+
+The income distribution is somewhat clustered by school districts. Some school districts have only lower median household incomes, while others seem to have a higher concentration of higher median household income.
+
+### Utility Poles
+
+[12 points]
+
+Use **sf** and **ggplot2**
+
+a) Obtain the coordinate locations of utility poles in Westchester County from [https://gis.westchestergov.com/](https://gis.westchestergov.com/). Show the dimensions of the dataset.
+
+```{r}
+#| message: false # hides messages from loading packages
+utility_pole_data <- read.csv('/Users/yelene/Desktop/Grad school/Columbia/Classes/Fall 2025/EDAV/Utility_Poles.csv')
+str(utility_pole_data)
+
+```
+
+The utility pole data contains 187,496 rows and 6 columns.
+
+b) Plot the locations of the points. You do not need to show a background map.
+
+```{r}
+#| message: false # hides messages from loading packages
+ggplot(utility_pole_data, aes(X,Y)) +
+  geom_point(color="darkblue", size=0.8, alpha=0.3) +
+  labs(x="Longitude", y="Latitude", title="Utility poles locations in Westchester") +
+  theme_minimal()
+
+```
+
+
+c) Create a density heatmap of the utility poles using the **ggdensity** package. 
+
+```{r}
+#| message: false # hides messages from loading packages
+utility_pole_shp <- st_read('/Users/yelene/Desktop/Grad school/Columbia/Classes/Fall 2025/EDAV/Utility_Poles/Utility_Poles.shp')
+
+pole_coords <- st_coordinates(utility_pole_shp)
+
+ggplot(pole_coords) +
+  geom_hdr(aes(x = X, y = Y), fill="orange") +
+  scale_fill_viridis_c(option = "inferno") +
+  coord_equal() +
+  theme_minimal() +
+  labs(
+    title = "Utility Pole Density in Westchester County",
+    x = "Longitude",
+    y = "Latitude"
+  )
+
+```
+
+
+d) Add municipal boundaries with labels. 
+
+```{r}
+#| message: false # hides messages from loading packages
+ggplot() +
+  #geom_hdr(data = pole_coords, aes(x = X, y = Y)) +
+  geom_hdr(data = pole_coords, aes(x = X, y = Y), fill="orange") +
+  scale_fill_viridis_c(option = "inferno") +
+  coord_equal() +
+  geom_sf(data = west_muni, fill = NA, color = "black", 
+          linewidth = 0.6) +
+  geom_sf_text(data = west_muni, aes(label = NAME), 
+               size = 2.5, color = "black") +
+  coord_sf() +
+  theme_minimal() +
+  labs(
+    title = "Utility Pole Density in Westchester County",
+    x = "Longitude",
+    y = "Latitude"
+  )
+```
+ 
+
+e) Describe the most prominent cluster of towns in terms of utility pole density. 
+
+The highest concentrations of utility poles can be found towards the South of Westchester county, in towns like Yonkers, White Plains or Scarsdale. It also seems like there is a high concentration of poles in Peekskill, located in the North-West of Westchester.
