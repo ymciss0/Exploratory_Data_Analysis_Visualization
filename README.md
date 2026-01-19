@@ -48,7 +48,7 @@ This repository contains assignments exploring various data visualization techni
 
 - **Distribution Analysis**: Histograms, density plots, frequency bar charts
 - **Relationship Exploration**: Scatter plots, faceted regressions, hexagonal heatmaps
-- **Multivariate Analysis**: PCA biplots, correlation matrices, alluvial diagrams
+- **Multivariate Analysis**: PCA biplots, alluvial diagrams
 - **Geospatial**: Choropleth maps, density heatmaps, layered spatial data
 - **Statistical Modeling**: Regression diagnostics, coefficient plots, residual analysis
 - **Time Series**: Temporal patterns and trend visualization
@@ -69,7 +69,6 @@ This repository contains assignments exploring various data visualization techni
 - `tidycensus` — Census data integration
 - `tmap` — Thematic maps for geospatial data
 - `sf` — Spatial features and coordinate system handling
-- `boot` — Bootstrap methods and datasets
 - `openintro` — Educational datasets
 
 ## 💡 Key Takeaways
@@ -79,7 +78,6 @@ Data visualization is essential for transforming raw numbers into actionable ins
 ## 📫 Connect
 
 - Portfolio: [ymciss0.github.io](https://ymciss0.github.io)
-- GitHub: [@ymciss0](https://github.com/ymciss0)
 
 ---
 
